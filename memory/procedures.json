@@ -1,0 +1,143 @@
+{
+  "pipeline_health_check": {
+    "description": "Diagnose general operational health of the roster pipeline.",
+    "agent": "pipeline_agent",
+    "steps": [
+      "Detect stuck pipeline operations",
+      "Identify abnormal stage durations",
+      "Report major bottlenecks"
+    ],
+    "tools": [
+      "detect_stuck_operations",
+      "detect_stage_bottlenecks"
+    ]
+  },
+
+  "stuck_operation_diagnosis": {
+    "description": "Investigate why roster processing jobs are stuck.",
+    "agent": "pipeline_agent",
+    "steps": [
+      "List stuck operations",
+      "Identify stage where processing stopped",
+      "Determine likely pipeline blockage"
+    ],
+    "tools": [
+      "detect_stuck_operations",
+      "detect_stage_bottlenecks"
+    ]
+  },
+
+  "pipeline_delay_analysis": {
+    "description": "Analyze stages causing slow pipeline execution.",
+    "agent": "pipeline_agent",
+    "steps": [
+      "Identify stages with abnormal duration",
+      "Compare stage duration metrics",
+      "Highlight problematic pipeline stages"
+    ],
+    "tools": [
+      "detect_stage_bottlenecks"
+    ]
+  },
+
+  "failure_organization_analysis": {
+    "description": "Identify organizations responsible for the highest pipeline failure rates.",
+    "agent": "quality_agent",
+    "steps": [
+      "Calculate failure counts per organization",
+      "Rank organizations by failures",
+      "Highlight high-risk organizations"
+    ],
+    "tools": [
+      "organization_failure_analysis"
+    ]
+  },
+
+  "source_system_failure_analysis": {
+    "description": "Identify which source systems cause the most failures.",
+    "agent": "quality_agent",
+    "steps": [
+      "Compute failure ratios by source system",
+      "Rank systems by failure contribution",
+      "Highlight problematic ingestion sources"
+    ],
+    "tools": [
+      "source_system_failure_analysis"
+    ]
+  },
+
+  "root_cause_diagnosis": {
+    "description": "Perform a multi-dimensional root cause analysis of pipeline failures.",
+    "agent": "quality_agent",
+    "steps": [
+      "Identify organizations contributing to failures",
+      "Determine pipeline stages where failures occur",
+      "Analyze source systems responsible",
+      "Summarize systemic root causes"
+    ],
+    "tools": [
+      "organization_failure_analysis",
+      "source_system_failure_analysis",
+      "generate_root_cause"
+    ]
+  },
+
+  "organization_deep_diagnosis": {
+    "description": "Investigate failures related to a specific organization.",
+    "agent": "quality_agent",
+    "steps": [
+      "Analyze organization failure frequency",
+      "Identify stages where organization fails",
+      "Determine source systems contributing"
+    ],
+    "tools": [
+      "organization_failure_analysis",
+      "generate_root_cause"
+    ]
+  },
+
+  "pipeline_stage_failure_analysis": {
+    "description": "Analyze which pipeline stages contribute most to failures.",
+    "agent": "quality_agent",
+    "steps": [
+      "Determine failure counts per pipeline stage",
+      "Rank stages by failure frequency",
+      "Identify critical stage weaknesses"
+    ],
+    "tools": [
+      "generate_root_cause"
+    ]
+  },
+
+  "data_source_diagnosis": {
+    "description": "Investigate data quality issues from upstream source systems.",
+    "agent": "quality_agent",
+    "steps": [
+      "Identify source systems producing invalid data",
+      "Analyze ingestion errors",
+      "Highlight unstable external systems"
+    ],
+    "tools": [
+      "source_system_failure_analysis"
+    ]
+  },
+
+  "market_success_trend_analysis": {
+    "description": "Analyze success rate trends across different markets.",
+    "agent": "analytics_agent",
+    "steps": [
+      "Load aggregated market metrics",
+      "Analyze success percentage trends",
+      "Identify markets with declining performance"
+    ],
+    "tools": [
+      "market_success_trend"
+    ]
+  },
+
+  "external_research": {
+  "description": "Search the web for external information about ETL pipelines, pipeline failures, or best practices.",
+  "agent": "quality_agent",
+  "tools": ["web_search"]
+}
+}

@@ -1,0 +1,9 @@
+pandas
+duckdb
+plotly
+streamlit
+langchain
+chromadb
+sentence-transformers
+tavily-python
+python-dotenv
