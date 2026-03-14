@@ -6,7 +6,10 @@ class SemanticMemory:
 
     def __init__(self):
 
-        self.client = chromadb.Client()
+        # persistent vector database
+        self.client = chromadb.PersistentClient(
+            path="memory/semantic_db"
+        )
 
         self.collection = self.client.get_or_create_collection(
             name="pipeline_knowledge"
@@ -27,7 +30,7 @@ class SemanticMemory:
         )
 
 
-    def retrieve(self, query, k=3):
+    def retrieve(self, query: str, k: int = 3) -> str:
 
         embedding = self.embedder.encode(query).tolist()
 
@@ -36,6 +39,11 @@ class SemanticMemory:
             n_results=k
         )
 
+        if not results["documents"]:
+            return ""
+
         docs = results["documents"][0]
+
+        print("Semantic memory retrieved:", docs)
 
         return "\n".join(docs)

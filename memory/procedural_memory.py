@@ -14,11 +14,13 @@ class ProceduralMemory:
             self.procedures = {}
 
 
-    def add_procedure(self, name, description, steps):
+    def add_procedure(self, name, description, agent, steps, tools):
 
         self.procedures[name] = {
-            "description": description,
-            "steps": steps
+        "description": description,
+        "agent": agent,
+        "steps": steps,
+        "tools": tools
         }
 
         self._save()
@@ -26,7 +28,11 @@ class ProceduralMemory:
 
     def get_procedure(self, name):
 
-        return self.procedures.get(name, None)
+        proc = self.procedures.get(name, None)
+
+        print("Procedural memory retrieved:", name)
+
+        return proc
 
 
     def list_procedures(self):

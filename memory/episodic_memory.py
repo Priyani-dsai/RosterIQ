@@ -37,29 +37,27 @@ class EpisodicMemory:
 
    def fetch_recent(self, limit=5, decay_lambda=0.05):
 
-    self.cursor.execute(
-        "SELECT user_query, agent_response, timestamp, importance FROM memory"
-    )
+    self.cursor.execute("""
+    SELECT user_query, agent_response, timestamp, importance
+    FROM memory
+    ORDER BY timestamp DESC
+    LIMIT 50
+    """)
 
     rows = self.cursor.fetchall()
 
     scored_memories = []
-
     now = datetime.now()
 
     for q, a, t, importance in rows:
 
         past_time = datetime.fromisoformat(t)
-
         delta_seconds = (now - past_time).total_seconds()
 
-        # exponential decay based on time difference
         decayed_score = importance * math.exp(-decay_lambda * delta_seconds / 3600)
 
         scored_memories.append((decayed_score, q, a))
 
-
-    # sort memories by decayed importance
     scored_memories.sort(reverse=True, key=lambda x: x[0])
 
     selected = scored_memories[:limit]
@@ -69,5 +67,9 @@ class EpisodicMemory:
     for _, q, a in selected:
         history.append(f"User: {q}\nAgent: {a}")
 
-    return "\n".join(history)
+    history_text = "\n".join(history)
+
+    print("Episodic memory retrieved:\n", history_text)
+
+    return history_text
 

@@ -124,7 +124,7 @@
 
   "market_success_trend_analysis": {
     "description": "Analyze success rate trends across different markets.",
-    "agent": "analytics_agent",
+    "agent": "pipeline_agent",
     "steps": [
       "Load aggregated market metrics",
       "Analyze success percentage trends",
@@ -136,8 +136,27 @@
   },
 
   "external_research": {
-  "description": "Search the web for external information about ETL pipelines, pipeline failures, or best practices.",
+  "description": "Search the web for external information about ETL pipelines or data engineering issues.",
   "agent": "quality_agent",
+  "steps": [
+    "Search external technical sources",
+    "Retrieve relevant results",
+    "Summarize findings"
+  ],
   "tools": ["web_search"]
+},
+"visualization_analysis": {
+  "description": "Generate visualizations such as charts and graphs for pipeline analytics.",
+  "agent": "pipeline_agent",
+  "steps": [
+    "Identify the requested visualization type",
+    "Generate the appropriate chart",
+    "Return the visualization to the dashboard"
+  ],
+  "tools": [
+    "failure_distribution",
+    "duration_anomaly_chart",
+    "pipeline_stage_health_heatmap"
+  ]
 }
 }

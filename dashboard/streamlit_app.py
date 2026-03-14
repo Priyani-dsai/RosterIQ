@@ -213,88 +213,92 @@ if st.button("Run Query"):
                 # Retrieve episodic memory
                 past_context = episodic_memory.fetch_recent()
 
+                # Retrieve semantic knowledge
                 semantic_context = semantic_memory.retrieve(query)
                 if not semantic_context:
                     semantic_context = "No additional domain knowledge found."
 
                 # Build context-aware query
                 full_query = f"""
-                You are an AI system analyzing provider roster pipelines.
+You are an AI system analyzing provider roster pipelines.
 
-                Relevant domain knowledge:
-                {semantic_context}
+Relevant domain knowledge:
+{semantic_context}
 
-                Previous interactions:
-                {past_context}
+Previous interactions:
+{past_context}
 
-                User question:
-                {query}
+User question:
+{query}
 
-                Provide a clear analytical answer using the available tools if necessary.
-                """
+Provide a clear analytical answer using the available tools if necessary.
+"""
 
-                # Invoke agent
-                response = agent.route_query(full_query)
+                # STEP 1 — Supervisor decides procedure FIRST
+                procedure = agent.choose_procedure(query)
 
-                procedure = response["procedure"]
-                agent_used = response["agent"]
-                answer = response["output"]
+                print("Selected procedure:", procedure)
 
-                # Only generate visualization if the supervisor selected visualization procedure
+                # ============================
+                # VISUALIZATION ROUTE
+                # ============================
                 if procedure == "visualization_analysis":
 
                     st.info("Visualization generated based on the query.")
 
-                    if "failure" in query.lower():
-                        fig = failure_distribution(roster_df)
-                        st.plotly_chart(fig, width="stretch", key="viz_failure")
+                    fig = generate_visualization(roster_df, query)
 
-                    elif "duration" in query.lower() or "anomaly" in query.lower():
-                        fig = duration_anomaly_chart(roster_df)
-                        st.plotly_chart(fig, width="stretch", key="viz_duration")
+                    if fig is not None:
+                        st.plotly_chart(
+                            fig,
+                            width="stretch",
+                            key=f"viz_{len(st.session_state.chat_history)}"
+                        )
 
-                    elif "health" in query.lower():
-                        fig = pipeline_stage_health_heatmap(roster_df)
-                        st.plotly_chart(fig, width="stretch", key="viz_health")
+                    answer = "Visualization generated based on your request."
+                    agent_used = "Pipeline Health Agent"
 
-                # Clean LangChain reasoning traces
+                # ============================
+                # NORMAL AGENT ROUTE
+                # ============================
+                else:
 
-                # Prefer Final Answer if available
-                if "Final Answer:" in answer:
-                    answer = answer.split("Final Answer:")[-1].strip()
+                    response = agent.route_query(full_query)
 
-                # Remove reasoning blocks
-                elif "Thought:" in answer:
-                    answer = answer.split("Thought:")[0].strip()
+                    procedure = response["procedure"]
+                    agent_used = response["agent"]
+                    answer = response["output"]
 
-                # Remove tool traces
-                answer = answer.replace("Action:", "")
-                answer = answer.replace("Action Input:", "")
-                answer = answer.strip()
+                    # Clean LangChain reasoning traces
+                    if "Final Answer:" in answer:
+                        answer = answer.split("Final Answer:")[-1].strip()
 
-                if not answer:
-                    answer = "The agent completed the analysis but no formatted answer was produced."
+                    elif "Thought:" in answer:
+                        answer = answer.split("Thought:")[0].strip()
 
-    
+                    answer = answer.replace("Action:", "")
+                    answer = answer.replace("Action Input:", "")
+                    answer = answer.strip()
+
+                    if not answer:
+                        answer = "The agent completed the analysis but no formatted answer was produced."
 
                 # Store interaction in episodic memory
                 episodic_memory.store_interaction(query, answer)
 
-
-                # Store for UI display
+                # Store conversation history
                 st.session_state.chat_history.append((query, answer))
 
-                # Show routing information for the latest response
+                # Show routing information
                 st.success(f"Supervisor selected procedure: {procedure}")
                 st.success(f"Specialist agent used: {agent_used}")
 
                 st.divider()
 
-                # Display conversation history
+                # Display chat history
                 for q, a in st.session_state.chat_history[::-1]:
                     st.markdown(f"**You:** {q}")
                     st.markdown(f"**Agent:** {a}")
-                    
 
             except Exception as e:
                 st.error(f"Agent error: {str(e)}")
