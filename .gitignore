@@ -1,8 +1,25 @@
+# Python cache
 __pycache__/
-.env
 *.pyc
+
+# Environment variables
+.env
+
+# Serialized / temp files
 *.pkl
 *.db
-.ipynb_checkpoints
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MacOS
 .DS_Store
+
+# Virtual environments
 venv/
+.venv/
+env/
+
+# Local memory databases
+memory/semantic_db/
+memory/episodic_memory.db
