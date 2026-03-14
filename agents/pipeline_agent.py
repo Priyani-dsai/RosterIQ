@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from langchain.tools import Tool
 from langchain.agents import initialize_agent, AgentType
 from langchain_groq import ChatGroq
@@ -7,9 +12,9 @@ from core.pipeline_intelligence import detect_stuck_operations, detect_stage_bot
 
 def create_pipeline_agent(roster_df):
 
-    # -------------------------
-    # Tool 1: Stuck Operations
-    # -------------------------
+    # ------------------------------------------------
+    # TOOL 1 — STUCK PIPELINE OPERATIONS
+    # ------------------------------------------------
     def stuck_tool(query=""):
 
         df = detect_stuck_operations(roster_df).head(10)
@@ -28,9 +33,9 @@ def create_pipeline_agent(roster_df):
         return "Detected stuck pipeline operations:\n" + "\n".join(results)
 
 
-    # -------------------------
-    # Tool 2: Pipeline Bottlenecks
-    # -------------------------
+    # ------------------------------------------------
+    # TOOL 2 — PIPELINE BOTTLENECK DETECTION
+    # ------------------------------------------------
     def bottleneck_tool(query=""):
 
         df = detect_stage_bottlenecks(roster_df).head(10)
@@ -57,104 +62,104 @@ def create_pipeline_agent(roster_df):
         return "Pipeline bottlenecks detected:\n" + "\n".join(results)
 
 
-    # -------------------------
-    # Tools registry
-    # -------------------------
+    # ------------------------------------------------
+    # TOOL DEFINITIONS
+    # ------------------------------------------------
     tools = [
 
-    Tool(
-        name="get_stuck_operations",
-        func=stuck_tool,
-        description="""
-Use this tool ONLY to detect roster pipeline jobs that are stuck or not progressing.
+        Tool(
+            name="get_stuck_operations",
+            func=stuck_tool,
+            description="""
+Use this tool when the user asks about pipelines that are stuck or halted.
 
-A pipeline is considered stuck when it is halted at a stage and not moving forward.
-
-Use this tool when the user asks:
+Examples:
 - Show stuck roster operations
 - Which pipelines are stuck
 - Jobs not progressing
 - Pipelines halted at a stage
-- Pipeline jobs not completing
 
-DO NOT use this tool for slow pipelines or performance issues.
-
-The tool returns a list of organizations and the pipeline stage where processing is stuck.
-After calling this tool, clearly explain which operations are stuck.
+This tool returns organizations and the pipeline stage where execution stopped.
 """
-    ),
+        ),
 
-    Tool(
-        name="get_pipeline_bottlenecks",
-        func=bottleneck_tool,
-        description="""
-Use this tool ONLY to detect pipeline performance bottlenecks or slow processing stages.
+        Tool(
+            name="get_pipeline_bottlenecks",
+            func=bottleneck_tool,
+            description="""
+Use this tool when the user asks about slow pipeline processing or performance bottlenecks.
 
-A bottleneck means the pipeline is working but taking unusually long to process.
-
-Use this tool when the user asks:
+Examples:
 - Show pipeline bottlenecks
 - Which pipeline stages are slow
 - Pipeline performance issues
-- Stage delays
 - Slow pipeline processing
-- Long processing times
+- Long stage execution times
 
-DO NOT use this tool for pipelines that are stuck or halted.
-
-The tool returns organizations and stage duration metrics indicating abnormal processing delays.
-After calling this tool, summarize which pipelines or stages are slow.
+This tool returns organizations where pipeline stages are unusually slow.
 """
-    )
+        )
 
-]
+    ]
 
 
-    # -------------------------
-    # LLM
-    # -------------------------
+    # ------------------------------------------------
+    # LLM INITIALIZATION
+    # ------------------------------------------------
     llm = ChatGroq(
         model="llama-3.1-8b-instant",
-        temperature=0
+        temperature=0,
+        groq_api_key=os.getenv("GROQ_API_KEY")
     )
 
 
-    # -------------------------
-    # Agent
-    # -------------------------
+    # ------------------------------------------------
+    # AGENT PROMPT
+    # ------------------------------------------------
     agent_kwargs = {
-    "prefix": """
-You are an AI assistant that analyzes provider roster pipeline data.
+        "prefix": """
+You are an AI assistant specialized in diagnosing provider roster pipeline operations.
 
-You must use ONLY the tools provided below.
+You have access to analytical tools that inspect pipeline execution.
 
 Rules:
-- Never invent new tools.
-- Only use tools that are explicitly listed.
-- If a tool is required, you MUST follow this format:
+- Use ONLY the provided tools.
+- Never invent tools.
+- Choose the most relevant tool depending on the user question.
 
-Thought: what you should do
+Guidelines:
+- If the pipeline is halted → use get_stuck_operations
+- If the pipeline is slow → use get_pipeline_bottlenecks
+
+When using tools follow this format:
+
+Thought: reasoning
 Action: tool_name
-Action Input: input to the tool
+Action Input: input
 
-After the tool returns an Observation, you must decide the next step.
+After observing the tool output, continue reasoning.
 
-If you have enough information, respond ONLY with:
+If you have enough information, respond with:
 
 Final Answer: <your answer>
 
-Never output both an Action and Final Answer in the same step.
+Never output both an Action and Final Answer together.
 """
-}
+    }
+
+
+    # ------------------------------------------------
+    # CREATE AGENT
+    # ------------------------------------------------
     agent = initialize_agent(
-    tools,
-    llm,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    agent_kwargs=agent_kwargs,
-    verbose=False,
-    max_iterations=4,
-    early_stopping_method="generate",
-    handle_parsing_errors=True
-)
+        tools,
+        llm,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_kwargs=agent_kwargs,
+        verbose=False,
+        max_iterations=4,
+        early_stopping_method="generate",
+        handle_parsing_errors=True
+    )
 
     return agent

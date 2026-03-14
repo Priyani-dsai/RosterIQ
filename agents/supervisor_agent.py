@@ -33,26 +33,28 @@ class SupervisorAgent:
 
         query_lower = query.lower()
 
-        # -----------------------------
+        # --------------------------------
         # HARD RULE ROUTING
-        # -----------------------------
-
-        # Visualization trigger (higher priority)
-        if any(word in query_lower for word in ["chart", "plot", "visualize","visualization", "graph", "distribution","histogram"]):
-           return "visualization_analysis"
-
+        # --------------------------------
+        # Visualization trigger
+        # (avoid broad terms like "distribution")
+        if any(word in query_lower for word in ["chart", "plot", "visualize", "graph"]):
+            return "visualization_analysis"
+        
         # Web search trigger
-        if any(word in query_lower for word in ["search","web","lookup","look up","online"]):
-           return "external_research"
-        # -----------------------------
+        if any(word in query_lower for word in ["search", "web", "lookup", "look up", "online"]):
+            return "external_research"
+
+        
+
+        # --------------------------------
         # LLM ROUTING
-        # -----------------------------
+        # --------------------------------
 
         procedures = self.procedural_memory.procedures
         procedure_names = list(procedures.keys())
 
         procedure_descriptions = ""
-
         for name, p in procedures.items():
             procedure_descriptions += f"{name}: {p['description']}\n"
 
@@ -92,9 +94,18 @@ Return ONLY the procedure name.
 
         print("Selected procedure:", procedure_name)
 
+        # Visualization handled outside agents
+        if procedure_name == "visualization_analysis":
+
+            return {
+                "procedure": procedure_name,
+                "agent": "Visualization Engine",
+                "output": "Generating visualization based on the query."
+            }
+
         procedure = self.procedural_memory.get_procedure(procedure_name)
 
-        # fallback if something unexpected happens
+        # fallback
         if not procedure:
             procedure = self.procedural_memory.get_procedure("pipeline_health_check")
 

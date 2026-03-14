@@ -14,14 +14,23 @@ from tools.web_search import web_search_tool
 
 def create_quality_agent(roster_df):
 
+    # ---------------------------------------------------
+    # TOOL 1 — ORGANIZATION FAILURE ANALYSIS
+    # ---------------------------------------------------
+
     def org_failure_tool(query=""):
         df = organization_failure_analysis(roster_df).head(10)
 
         results = []
         for org, count in df.items():
-           results.append(f"{org} — {count} failures")
+            results.append(f"{org} — {count} failures")
 
         return "Top organizations causing failures:\n" + "\n".join(results)
+
+
+    # ---------------------------------------------------
+    # TOOL 2 — SOURCE SYSTEM FAILURE ANALYSIS
+    # ---------------------------------------------------
 
     def source_failure_tool(query=""):
         df = source_system_failure_analysis(roster_df)
@@ -31,6 +40,11 @@ def create_quality_agent(roster_df):
             results.append(f"{system} — {round(ratio*100,2)}% failure rate")
 
         return "Source systems contributing most to pipeline failures:\n" + "\n".join(results[:10])
+
+
+    # ---------------------------------------------------
+    # TOOL 3 — ROOT CAUSE ANALYSIS
+    # ---------------------------------------------------
 
     def root_cause_tool(query=""):
 
@@ -65,21 +79,23 @@ Source systems contributing to failures:
 {', '.join(system_text)}
 """
 
+
+    # ---------------------------------------------------
+    # TOOL DEFINITIONS
+    # ---------------------------------------------------
+
     tools = [
 
         Tool(
             name="get_failure_organizations",
             func=org_failure_tool,
             description="""
-Returns the organizations responsible for the highest number of provider roster pipeline failures.
+Use this tool when the user asks about which organizations are causing pipeline failures.
 
-Use this tool when the user asks questions like:
+Example queries:
 - Which organizations cause most failures?
 - Top failing organizations
-- Organizations with highest pipeline failure counts
-
-The tool returns a ranked list of organizations and their failure counts.
-After calling this tool, summarize the results clearly for the user.
+- Organizations with highest failure counts
 """
         ),
 
@@ -87,15 +103,12 @@ After calling this tool, summarize the results clearly for the user.
             name="get_source_system_failures",
             func=source_failure_tool,
             description="""
-Identifies which source systems are responsible for pipeline failures.
+Use this tool when the user asks about source systems responsible for failures.
 
-Use when the user asks questions like:
+Example queries:
 - Which source systems fail most?
-- Source systems causing pipeline failures
-- Failure distribution by source system
-
-The tool returns source systems and their failure ratios.
-After using the tool, explain which systems contribute most to failures.
+- Source system failure rates
+- Systems causing ingestion failures
 """
         ),
 
@@ -103,81 +116,89 @@ After using the tool, explain which systems contribute most to failures.
             name="get_root_cause",
             func=root_cause_tool,
             description="""
-Performs root cause analysis for provider roster pipeline failures.
+Use this tool when the user asks about WHY pipelines are failing.
 
-Use when the user asks:
+Example queries:
 - Why are pipelines failing?
 - Root cause of failures
-- Failure stage analysis
-
-The tool returns insights including failure organizations, failure stages, and source system issues.
-After calling the tool, summarize the root causes clearly.
+- Causes of ingestion failures
 """
         ),
 
         Tool(
-    name="web_search",
-    func=web_search_tool,
-    description="""
-Search the internet for external technical information.
+            name="web_search",
+            func=web_search_tool,
+            description="""
+Use this tool ONLY when the user explicitly asks to search the web
+or asks about general ETL/data engineering concepts not present in the dataset.
 
-Use this tool when the user asks about:
-- ETL pipelines
-- data engineering concepts
-- debugging data pipelines
-- causes of pipeline bottlenecks
-- search something
-- look up external information
-- research causes or best practices
-- find explanations outside the dataset
-
-The tool returns web article titles and links.
-After using the tool, summarize the findings for the user.
+Example queries:
+- Search causes of ETL pipeline bottlenecks
+- Search debugging methods for data pipelines
+- Look up ETL pipeline best practices
 """
-)
+        )
 
-]
+    ]
 
+
+    # ---------------------------------------------------
+    # LLM INITIALIZATION
+    # ---------------------------------------------------
 
     llm = ChatGroq(
-       model="llama-3.1-8b-instant",
-       temperature=0,
-       groq_api_key=os.getenv("GROQ_API_KEY")
-     )
-    
+        model="llama-3.1-8b-instant",
+        temperature=0,
+        groq_api_key=os.getenv("GROQ_API_KEY")
+    )
+
+
+    # ---------------------------------------------------
+    # AGENT PROMPT
+    # ---------------------------------------------------
+
     agent_kwargs = {
-    "prefix": """
+        "prefix": """
 You are an AI assistant that analyzes provider roster pipeline data.
 
-You must use ONLY the tools provided below.
+You have access to specialized analytical tools.
 
 Rules:
-- Never invent new tools.
-- Only use tools that are explicitly listed.
-- If a tool is required, you MUST follow this format:
+- Always prefer dataset analysis tools before web search.
+- Use web_search ONLY when the user explicitly asks to search the internet.
+- Never invent tools.
+- Use ONLY the provided tools.
 
-Thought: what you should do
+When using a tool follow this format:
+
+Thought: reasoning
 Action: tool_name
-Action Input: input to the tool
+Action Input: input
 
-After the tool returns an Observation, you must decide the next step.
+After the observation you may continue reasoning.
 
-If you have enough information, respond ONLY with:
+If you have enough information, output:
 
 Final Answer: <your answer>
 
-Never output both an Action and Final Answer in the same step.
+Do NOT output Action and Final Answer together.
 """
-}
+    }
+
+
+    # ---------------------------------------------------
+    # CREATE AGENT
+    # ---------------------------------------------------
+
     agent = initialize_agent(
-    tools,
-    llm,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    agent_kwargs=agent_kwargs,
-    verbose=False,
-    max_iterations=4,
-    early_stopping_method="generate",
-    handle_parsing_errors=True
-)
+        tools,
+        llm,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_kwargs=agent_kwargs,
+        verbose=False,
+        max_iterations=4,
+        early_stopping_method="generate",
+        handle_parsing_errors=True
+    )
 
     return agent

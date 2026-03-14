@@ -4,9 +4,6 @@ import os
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, PROJECT_ROOT)
 
-# print("PROJECT ROOT:", PROJECT_ROOT)
-# print("SYS PATH:", sys.path)
-
 import streamlit as st
 import pandas as pd
 
@@ -18,27 +15,30 @@ from agents.supervisor_agent import SupervisorAgent
 from memory.episodic_memory import EpisodicMemory
 from memory.semantic_memory import SemanticMemory
 from core.insight_engine import generate_pipeline_insights
-from tools.visualization import *
 
 
-
-# Page config
+# ===============================
+# PAGE CONFIG
+# ===============================
 
 st.set_page_config(
-page_title="RosterIQ",
-layout="wide"
+    page_title="RosterIQ",
+    layout="wide"
 )
+
 st.title("RosterIQ: Provider Roster Intelligence Dashboard")
 
 
-# Load data
+# ===============================
+# LOAD DATA
+# ===============================
 
 @st.cache_data
 def load_data():
     loader = DataLoader(
-    "data/roster_processing_details.csv",
-    "data/aggregated_operational_metrics.csv"
-)
+        "data/roster_processing_details.csv",
+        "data/aggregated_operational_metrics.csv"
+    )
 
     roster_df, market_df = loader.load_data()
 
@@ -48,7 +48,9 @@ def load_data():
 roster_df, market_df, loader = load_data()
 
 
-# Load agent
+# ===============================
+# LOAD AGENTS
+# ===============================
 
 @st.cache_resource
 def load_agent(roster_df):
@@ -56,14 +58,18 @@ def load_agent(roster_df):
 
 agent = load_agent(roster_df)
 
-# initialize episodic memory once per session
+
+# ===============================
+# LOAD MEMORY SYSTEMS
+# ===============================
+
 @st.cache_resource
 def load_episodic_memory():
     return EpisodicMemory()
 
 episodic_memory = load_episodic_memory()
 
-# initialize semantic memory once per session
+
 @st.cache_resource
 def load_semantic_memory():
     return SemanticMemory()
@@ -71,7 +77,9 @@ def load_semantic_memory():
 semantic_memory = load_semantic_memory()
 
 
-# Data Summary
+# ===============================
+# SYSTEM OVERVIEW
+# ===============================
 
 st.header("System Overview")
 
@@ -84,7 +92,10 @@ col2.metric("Organizations", summary["organizations"])
 col3.metric("Failed Files", summary["failed_files"])
 col4.metric("Stuck Files", summary["stuck_files"])
 
-# Autonomous Insights
+
+# ===============================
+# AUTONOMOUS INSIGHTS
+# ===============================
 
 st.divider()
 st.header("🧠 Autonomous Pipeline Insights")
@@ -94,7 +105,10 @@ insights = generate_pipeline_insights(roster_df)
 for insight in insights:
     st.info(insight)
 
-# Stuck Operations
+
+# ===============================
+# STUCK OPERATIONS
+# ===============================
 
 st.divider()
 st.header("🚨 Stuck Roster Operations")
@@ -107,8 +121,9 @@ else:
     st.dataframe(stuck_df, width="stretch")
 
 
-
-# Pipeline Bottlenecks
+# ===============================
+# PIPELINE BOTTLENECKS
+# ===============================
 
 st.divider()
 st.header("⚠️ Pipeline Bottlenecks")
@@ -121,7 +136,9 @@ else:
     st.dataframe(bottlenecks.head(20), width="stretch")
 
 
-# Failure Analysis
+# ===============================
+# FAILURE ANALYSIS
+# ===============================
 
 st.divider()
 st.header("📉 Top Organizations Causing Failures")
@@ -131,7 +148,9 @@ failure_fig = failure_distribution(roster_df)
 st.plotly_chart(failure_fig, width="stretch")
 
 
-# Duration Anomaly Visualization
+# ===============================
+# DURATION ANOMALY
+# ===============================
 
 st.divider()
 st.header("⏱ Stage Duration Anomalies")
@@ -141,7 +160,9 @@ fig = duration_anomaly_chart(roster_df)
 st.plotly_chart(fig, width="stretch")
 
 
-# Root Cause Panel
+# ===============================
+# ROOT CAUSE PANEL
+# ===============================
 
 st.divider()
 st.header("🧠 Root Cause Insights")
@@ -163,7 +184,9 @@ with col3:
     st.dataframe(root["source_systems"])
 
 
-# Market Success Trends
+# ===============================
+# MARKET SUCCESS TRENDS
+# ===============================
 
 st.divider()
 st.header("📊 Market Success Trends")
@@ -171,18 +194,19 @@ st.header("📊 Market Success Trends")
 import plotly.express as px
 
 market_fig = px.line(
-market_df,
-x="MONTH",
-y="SCS_PERCENT",
-color="MARKET",
-title="Market Success Rate Over Time"
+    market_df,
+    x="MONTH",
+    y="SCS_PERCENT",
+    color="MARKET",
+    title="Market Success Rate Over Time"
 )
 
 st.plotly_chart(market_fig, width="stretch")
 
 
-
-# AI Query Panel
+# ===============================
+# AI QUERY PANEL
+# ===============================
 
 st.divider()
 st.header("🤖 RosterIQ AI Assistant")
@@ -190,17 +214,24 @@ st.header("🤖 RosterIQ AI Assistant")
 st.markdown("""
 Example questions you can ask:
 
-* Which organizations cause most failures?
-* Show stuck roster operations
-* What source systems fail most?
-* Why are pipelines failing?
-* Show pipeline bottlenecks
-  """)
+• Which organizations cause most failures?  
+• Show stuck roster operations  
+• What source systems fail most?  
+• Why are pipelines failing?  
+• Show pipeline bottlenecks  
+""")
+
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+
 query = st.text_input("Ask a question about the roster pipeline")
+
+
+# ===============================
+# QUERY EXECUTION
+# ===============================
 
 if st.button("Run Query"):
 
@@ -215,10 +246,12 @@ if st.button("Run Query"):
 
                 # Retrieve semantic knowledge
                 semantic_context = semantic_memory.retrieve(query)
+
                 if not semantic_context:
                     semantic_context = "No additional domain knowledge found."
 
-                # Build context-aware query
+
+                # Build contextual prompt (for agent reasoning)
                 full_query = f"""
 You are an AI system analyzing provider roster pipelines.
 
@@ -234,14 +267,20 @@ User question:
 Provide a clear analytical answer using the available tools if necessary.
 """
 
-                # STEP 1 — Supervisor decides procedure FIRST
+
+                # ===================================
+                # SUPERVISOR DECISION
+                # ===================================
+
                 procedure = agent.choose_procedure(query)
 
                 print("Selected procedure:", procedure)
 
-                # ============================
+
+                # ===================================
                 # VISUALIZATION ROUTE
-                # ============================
+                # ===================================
+
                 if procedure == "visualization_analysis":
 
                     st.info("Visualization generated based on the query.")
@@ -256,20 +295,22 @@ Provide a clear analytical answer using the available tools if necessary.
                         )
 
                     answer = "Visualization generated based on your request."
-                    agent_used = "Pipeline Health Agent"
+                    agent_used = "Visualization Engine"
 
-                # ============================
+
+                # ===================================
                 # NORMAL AGENT ROUTE
-                # ============================
+                # ===================================
+
                 else:
 
-                    response = agent.route_query(full_query)
+                    response = agent.route_query(query)
 
                     procedure = response["procedure"]
                     agent_used = response["agent"]
                     answer = response["output"]
 
-                    # Clean LangChain reasoning traces
+                    # Clean reasoning traces
                     if "Final Answer:" in answer:
                         answer = answer.split("Final Answer:")[-1].strip()
 
@@ -283,25 +324,43 @@ Provide a clear analytical answer using the available tools if necessary.
                     if not answer:
                         answer = "The agent completed the analysis but no formatted answer was produced."
 
-                # Store interaction in episodic memory
+
+                # ===================================
+                # STORE EPISODIC MEMORY
+                # ===================================
+
                 episodic_memory.store_interaction(query, answer)
 
-                # Store conversation history
+
+                # ===================================
+                # UPDATE CHAT HISTORY
+                # ===================================
+
                 st.session_state.chat_history.append((query, answer))
 
-                # Show routing information
+
+                # ===================================
+                # SHOW ROUTING INFO
+                # ===================================
+
                 st.success(f"Supervisor selected procedure: {procedure}")
-                st.success(f"Specialist agent used: {agent_used}")
+                st.success(f"System component used: {agent_used}")
 
                 st.divider()
 
-                # Display chat history
+
+                # ===================================
+                # DISPLAY HISTORY
+                # ===================================
+
                 for q, a in st.session_state.chat_history[::-1]:
                     st.markdown(f"**You:** {q}")
                     st.markdown(f"**Agent:** {a}")
 
+
             except Exception as e:
                 st.error(f"Agent error: {str(e)}")
+
 
     else:
         st.warning("Please enter a query.")
